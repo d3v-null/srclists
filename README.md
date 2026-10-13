@@ -8,6 +8,48 @@ srclist_pumav3_EoR0LoBES_EoR1pietro_CenA-GP_2023-11-07.fits
 
 ## Hyperdrive / WODEN sky models
 
+### 13/10/2026
+`srclist_pumav3_EoR0LoBES_EoR1pietro_CenA-GP_2023-11-07_no-shapelets.yaml`
+
+A version of the 07/11/2023 hyperdrive sky model with **no shapelet components**, for
+predictors that only support point and Gaussian components (DP3 in particular, whose
+`sky_model/SkyModelFunctions.cc` throws "Only point sources and Gaussian sources are supported"
+for anything else). Everything that was not a shapelet (337k points, 15k Gaussians) is
+byte-for-byte unchanged.
+
+ - **Fornax A**: the 2 shapelet components (3828 coefficients each, 559 Jy at 200 MHz once the
+   shapelet zero-spacing factor of 0.993 is applied) and 5 small Gaussians (2.2 Jy) were replaced
+   by the WODEN multiscale-CLEAN model
+   [`examples/FornaxA/srclist_msclean_fornaxA_phase1+2.txt`](https://github.com/JLBLine/WODEN/blob/master/examples/FornaxA/srclist_msclean_fornaxA_phase1%2B2.txt)
+   converted with `hyperdrive srclist-convert -i woden`: 4544 points + 1736 Gaussians, reference
+   frequency 188.79 MHz, spectral index -0.8 (hyperdrive's default; the WODEN file has one
+   frequency per component). Caveat: this model integrates to 468 Jy at 200 MHz, about 17% less
+   than the shapelet model.
+ - **The other 59 shapelet components** (55 EoR1 sources, 135 Jy in total, mostly 45
+   coefficients / order 8; brightest nEXT035140-2743 at 21.6 Jy) were each fitted with a set of
+   Gaussians using
+   [mwa-demo/shapelet2gauss](https://github.com/MWATelescope/mwa-demo/tree/8b58c18c96094943514c849859eb239878eee4aa/shapelet2gauss)
+   ([PR](https://github.com/MWATelescope/mwa-demo/pull/3)): 6590 Gaussians in total, median 120
+   per component. The fit is a sign-constrained matching pursuit over a dictionary of 8 Gaussian
+   shapes, solved in the uv plane with hyperdrive-exact shapelet and Gaussian envelopes
+   (validated to 1e-5 against `hyperdrive vis-simulate`), weighted by the real baseline
+   distribution of MWA obs 1443210064 (Phase II compact, max 741 m) plus a uniform fill out to
+   2000 wavelengths, with the zero spacing carrying 5% of the weight. Sign constraints are
+   what make this work: a free nonlinear Gaussian fit finds cancelling +/-7000 Jy pairs for a
+   2 Jy source, which break under the phase-centre uv projection that hyperdrive and DP3 use
+   for Gaussians.
+ - Fit quality: on baselines under 600 wavelengths the rms error is 0.08% (median) to 0.22%
+   (worst) of the peak visibility, zero-spacing flux error under 0.05%. Simulating 7 of the
+   sources (including the 3 brightest) with hyperdrive from the shapelet and the Gaussian
+   versions gives 0.04-0.25% rms and under 1.1% maximum visibility differences at the
+   1443210064 phase centre. Per-component numbers are in the tool's
+   `fit_report_2023-11-07_srclist.txt`.
+ - Limitations: the shapelet models ring strongly beyond ~1500 wavelengths (their images,
+   band-limited at 5000 wavelengths, have negative lobes larger than the peak); that structure
+   is only reproduced approximately (0.5-1% rms out to 2000 wavelengths). For Phase II extended
+   data, re-run the tool with that array's baseline lengths and a larger `--uvmax`.
+ - The `.fits` version of the 07/11/2023 model was not converted.
+
 ### 07/11/2023
 `srclist_pumav3_EoR0LoBES_EoR1pietro_CenA-GP_2023-11-07.fits` \
 `srclist_pumav3_EoR0LoBES_EoR1pietro_CenA-GP_2023-11-07.yaml`
