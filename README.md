@@ -6,7 +6,10 @@ Current suggested sky model to use is:
 srclist_pumav3_EoR0LoBES_EoR1pietro_CenA-GP_2023-11-07.fits
 ```
 
-## Hyperdrive / WODEN sky models
+## DP3 / hyperdrive compatible sky models
+
+Sky models in this section contain only point and Gaussian components (no shapelets), so they work in
+DP3 as well as hyperdrive. Each is provided as a hyperdrive `.yaml` and a DP3 `.skymodel`.
 
 ### 14/10/2026
 `srclist_pumav3_EoR0LoBES_EoR1pietro_CenA-GP_2023-11-07_no-shapelets_FnxA-selfcal-20260905x087.yaml` \
@@ -16,7 +19,7 @@ srclist_pumav3_EoR0LoBES_EoR1pietro_CenA-GP_2023-11-07.fits
 The 13/10/2026 no-shapelets catalogue with **Fornax A replaced by a model self-calibrated from MWA
 data** (16 zenith-pointed EoR1-high observations of 2026-09-05, 1472677088 to 1472678888, 167-197 MHz,
 Phase III 128-tile compact layout, 741 m longest baseline). 96 components (75 points, 21 Gaussians,
-448.8 Jy at 183.02 MHz, flux-weighted spectral index -0.88) covering 1.3 deg around Fornax A; the 44
+415.7 Jy at the 200 MHz reference frequency, 448.9 Jy at 183 MHz, flux-weighted spectral index -0.88) covering 1.3 deg around Fornax A; the 44
 catalogue sources inside that radius were removed because the self-cal model already contains them.
 Everything else is unchanged from the no-shapelets catalogue.
 
@@ -64,7 +67,9 @@ How it was made:
    [`yaml2dp3.py`](https://github.com/MWATelescope/mwa-demo/blob/557a06e/shapelet2gauss/yaml2dp3.py)
    from the `.yaml` (full catalogue with `--patch single`, Fornax A file with its own `FornaxA`
    patch), trailing commas stripped so that lsmtool also reads them. Ra/Dec, spectral and
-   Gaussian conventions are as described for the 13/10/2026 file below.
+   Gaussian conventions are as described for the 13/10/2026 file below. The Fornax A components are
+   power laws referenced to 200 MHz like the rest of the catalogue (re-referenced exactly from the
+   183.02 MHz fit), so that `hyperdrive srclist-convert` can write the FITS format (see below).
 
 ### 13/10/2026
 `srclist_pumav3_EoR0LoBES_EoR1pietro_CenA-GP_2023-11-07_no-shapelets.yaml`
@@ -152,6 +157,28 @@ DP3 with `predict.sourcedb=<file>.skymodel`, no `makesourcedb` step). How it was
    `hyperdrive vis-simulate` of the YAML deviates from it by 0.2-0.8% rms because hyperdrive's
    visibilities are not exactly in the frame of the UVWs it writes to the MS (hyperdrive PR 92
    adds `--uvw-frame casacore` for this).
+
+### Converting these files to other formats
+
+Everything in this section is a hyperdrive `.yaml` (the master copy) plus a DP3 `.skymodel` made from it.
+`hyperdrive srclist-convert` (0.8.0, `-i`/`-o` types `hyperdrive, fits, rts, woden, ao, dp3`) is the
+tool for the other formats; the output type is taken from the extension, or given with `-o`. What was
+tested on these files:
+
+| target | command | what you get |
+|---|---|---|
+| FITS (the format of the 07/11/2023 `.fits`) | `hyperdrive srclist-convert <file>.yaml <file>.fits` | lossless: all 354167 components, curved power laws kept (7 s, 42 MB). The writer requires power-law flux densities to be given at the reference frequency, which these files satisfy; a model whose power laws are referenced elsewhere makes it panic with "Power-law flux densities must be at the reference frequency". |
+| RTS | `hyperdrive srclist-convert -o rts <file>.yaml <file>_rts.txt` | **curved power laws are dropped** (RTS has no such flux model): only 69277 of 338753 sources survive. Fine for `FornaxA_selfcal-20260905x087.yaml` (all power laws, written as flux lists). `--collapse-into-single-source` makes an RTS patch list. |
+| WODEN | `hyperdrive srclist-convert -o woden <file>.yaml <file>_woden.txt` | same loss of curved power laws as RTS; the Fornax A model converts completely. |
+| AO (Andre Offringa / `aoflagger`-style text) | `hyperdrive srclist-convert -o ao <file>.yaml <file>_ao.txt` | same loss of curved power laws; the Fornax A model converts completely. |
+| DP3 `.skymodel` | not writable by hyperdrive 0.8.0 ("Writing dp3-style source lists is not supported"); use [`yaml2dp3.py`](https://github.com/MWATelescope/mwa-demo/blob/557a06e/shapelet2gauss/yaml2dp3.py), which keeps the curved power laws (`SpectralIndex=[a, q ln 10]`, exact). | the `.skymodel` files here. |
+| `.skymodel` back to hyperdrive | `hyperdrive srclist-convert -i dp3 <file>.skymodel <file>.yaml` | works (round trip of the Fornax A file reproduces all 96 components and the same flux at 183 MHz). |
+
+For the hyperdrive tools themselves (`di-calibrate`, `vis-simulate`, `peel`, `srclist-by-beam`) the `.yaml`
+or the `.fits` can be used directly; for DP3 use the `.skymodel` with `predict.usebeammodel=true`,
+`beammode=full` and `usefastpredict=false` (see the 13/10/2026 notes and the rapthor-mwa guide).
+
+## Hyperdrive / WODEN sky models
 
 ### 07/11/2023
 `srclist_pumav3_EoR0LoBES_EoR1pietro_CenA-GP_2023-11-07.fits` \
