@@ -8,6 +8,64 @@ srclist_pumav3_EoR0LoBES_EoR1pietro_CenA-GP_2023-11-07.fits
 
 ## Hyperdrive / WODEN sky models
 
+### 14/10/2026
+`srclist_pumav3_EoR0LoBES_EoR1pietro_CenA-GP_2023-11-07_no-shapelets_FnxA-selfcal-20260905x087.yaml` \
+`srclist_pumav3_EoR0LoBES_EoR1pietro_CenA-GP_2023-11-07_no-shapelets_FnxA-selfcal-20260905x087.skymodel` \
+`FornaxA_selfcal-20260905x087.yaml` / `FornaxA_selfcal-20260905x087.skymodel` (the Fornax A model alone)
+
+The 13/10/2026 no-shapelets catalogue with **Fornax A replaced by a model self-calibrated from MWA
+data** (16 zenith-pointed EoR1-high observations of 2026-09-05, 1472677088 to 1472678888, 167-197 MHz,
+Phase III 128-tile compact layout, 741 m longest baseline). 96 components (75 points, 21 Gaussians,
+448.8 Jy at 183.02 MHz, flux-weighted spectral index -0.88) covering 1.3 deg around Fornax A; the 44
+catalogue sources inside that radius were removed because the self-cal model already contains them.
+Everything else is unchanged from the no-shapelets catalogue.
+
+How it was made:
+
+ - Input: the pipeline-calibrated 8 s / 80 kHz uvfits of the 16 obs (Pawsey `high1.uvfits`,
+   `hyp_<obs>_ssins_30l_src8k_300it_8s_80kHz.uvfits`, hyperdrive DI calibration against the
+   07/11/2023 shapelet catalogue), converted with `hyperdrive vis-convert` and concatenated in
+   time with casacore `msconcat` (materialised with DP3 `msout.uvwcompression=false`).
+ - Self-calibration with [rapthor](https://git.astron.nl/RD/rapthor) in the MWA build
+   `ghcr.io/d3v-null/rapthor-mwa:sha-48f973a-pass` (DP3 6.6 + EveryBeam MWA beam + WSClean 3.6;
+   [usage guide](https://gist.github.com/d3v-null/63eb2255d8823783866da9e77debfce0)): one
+   direction, phase-only DDECal (56 s / 1 MHz solutions, 3 MHz smoothness, baselines over 30
+   wavelengths) against the catalogue (top 1000 sources by apparent flux, Gaussians under 0.3 Jy
+   dropped), then WSClean multiscale imaging of a 28 deg field at 110 arcsec cells (Briggs 0,
+   baselines over 15 wavelengths, 4 MHz output channels with a 3-term spectral fit) and PyBDSF
+   source extraction. A second cycle seeded with the first cycle's model reproduces it to three
+   decimals, so the model is the converged one.
+ - Flux scale. (1) WSClean's `-apply-primary-beam` for MWA data was found to have the right beam
+   shape but a normalisation of ~0.023 at zenith, so rapthor's "true sky" fluxes were 40x too
+   high; the true-sky model was rebuilt as apparent flux divided by the zenith-normalised FEE
+   beam (`mwa_hyperbeam`, delays of the observation, block mid-time, Stokes-I power). (2) A
+   model self-calibrated from data that were calibrated with the shapelet catalogue inherits that
+   catalogue's Fornax A flux scale (Fornax A measured at 516 Jy, with the rest of the field 12-17%
+   above the catalogue). The published model is therefore the self-cal model times **0.87** =
+   0.97 / 1.12, where 0.97 is the least-squares ratio of the model to Fornax A in independent data
+   (obs 1452344160, 2026-01-13) and 1.12 the ratio of the field sources to the catalogue in the
+   same data, i.e. Fornax A is put on the field catalogue's flux scale (the same correction the
+   empirical "Fornax A x0.80" shapelet model applies).
+ - Validation on obs 1452344160 (a different night, same array): data/model least-squares scale
+   0.94-0.97 and flat from 15 to 450 wavelengths before the 0.87 scaling (the shapelet model gives
+   0.81 rising to 0.90, the MS-CLEAN model 1.00 falling to 0.78); dirty-image residual after
+   subtracting Fornax A 0.07 Jy/beam rms (shapelet 0.26, MS-CLEAN 0.22). Calibrating and
+   subtracting the whole catalogue with this model, the CHIPS foreground-wedge power
+   (0.01 < k_perp < 0.1 h/Mpc, k_par < 0.1) is 0.39 (XX) / 0.43 (YY) of the original catalogue's,
+   against 0.43 / 0.47 for the Fornax A x0.80 shapelet model and 0.56 / 0.59 for the MS-CLEAN
+   model, at equal window power. Products:
+   `https://projects.pawsey.org.au/high1.uvfits/fornaxafix_1452344160_{G2_calibrated,H2_residual}_selfcalfnxa087.uvfits`.
+ - Limitations: the model only contains structure the 741 m array can see (nothing above 450
+   wavelengths, 7.5 arcmin resolution), so it is for Phase II compact / Phase III data, not for
+   Phase II extended. The per-component spectral indices come from a 3-term fit over 167-197 MHz
+   and should not be extrapolated far outside that band. The 0.87 factor is a single-night
+   measurement (the 14-night scatter of the equivalent shapelet correction is +/-0.04).
+ - The `.skymodel` files are DP3 / makesourcedb text written by
+   [`yaml2dp3.py`](https://github.com/MWATelescope/mwa-demo/blob/557a06e/shapelet2gauss/yaml2dp3.py)
+   from the `.yaml` (full catalogue with `--patch single`, Fornax A file with its own `FornaxA`
+   patch), trailing commas stripped so that lsmtool also reads them. Ra/Dec, spectral and
+   Gaussian conventions are as described for the 13/10/2026 file below.
+
 ### 13/10/2026
 `srclist_pumav3_EoR0LoBES_EoR1pietro_CenA-GP_2023-11-07_no-shapelets.yaml`
 
