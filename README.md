@@ -11,6 +11,63 @@ srclist_pumav3_EoR0LoBES_EoR1pietro_CenA-GP_2023-11-07.fits
 Sky models in this section contain only point and Gaussian components (no shapelets), so they work in
 DP3 as well as hyperdrive. Each is provided as a hyperdrive `.yaml` and a DP3 `.skymodel`.
 
+### 16/10/2026
+`srclist_pumav3_EoR0LoBES_EoR1pietro_CenA-GP_2023-11-07_no-shapelets_FnxA-v2-20260905.yaml` \
+`srclist_pumav3_EoR0LoBES_EoR1pietro_CenA-GP_2023-11-07_no-shapelets_FnxA-v2-20260905.skymodel` \
+`FornaxA_v2-20260905.yaml` / `FornaxA_v2-20260905.skymodel` (the Fornax A model alone)
+
+The 13/10/2026 no-shapelets catalogue with **Fornax A replaced by a Gaussian model fitted to MWA
+visibilities at all baselines**. It supersedes the 14/10/2026 self-cal model, which leaves a striped
+residual across Fornax A (see below). 106 Gaussian components, 426.3 Jy at the 200 MHz reference
+frequency (458.9 Jy at 183 MHz), flux-weighted spectral index -0.82 (at 200 MHz). Unlike the 14/10/2026 file, the 44
+catalogue sources within 1.3 deg of Fornax A are kept: the new model only describes Fornax A itself.
+Everything else is unchanged from the no-shapelets catalogue.
+
+Why the self-cal model needed replacing: about 15 of its 75 point components add up in phase at
+~310 wavelengths (position angle 60-68 deg), a part of the uv plane the Phase III compact array samples
+only with two baselines (Tile087-Tile097 and Tile087-Tile098). There the model predicts 21-30 Jy where
+the data show 5-11 Jy, which images as an ~11 arcmin fringe pattern across Fornax A after subtraction.
+Refitting the fluxes of its components does not remove it; the component layout is the problem.
+
+How it was made:
+
+ - Data: 21 EoR1-high observations of 2026-09-05 at gridpoints 0, 2 and 4 (training set), 167-197 MHz,
+   Phase III compact, calibrated with the 07/11/2023 catalogue with Fornax A x0.80. Every other
+   source was peeled (hyperdrive, 1000 sources with ionospheric offsets) and Fornax A added back from
+   a simulation of the x0.80 model with the peel's own gain and offsets.
+ - Model: 173 Gaussians of 220 arcsec FWHM on a 180 arcsec grid over the self-cal model's footprint,
+   plus its 21 large (747 arcsec) Gaussians. Positions fixed; fluxes (>= 0) and spectral indices
+   ([-2.5, 1], weak prior toward -0.8) fitted in visibility space with each tile's FEE beam and
+   Fornax A's peel ionospheric offsets, using all baselines from 20 wavelengths up (~490 at most)
+   with equal total weight per |uv| bin. 106 of the 194 components are non-zero. Model choice by
+   leave-one-pointing-out cross-validation within the training set.
+ - Flux scale: data/model 1.002 on held-out baselines, flat to 0.5% across the band and 1.00-1.01 from
+   10 to 200 wavelengths; the night-median peel gain on Fornax A is 0.99 (x0.80 gives 1.03). The total
+   is 5% below the x0.80 model, all of it below 10 wavelengths, which no stage constrains.
+
+Validation on held-out observations (gridpoints 6, 15 and 31 of the same night, never used in the fit):
+
+ - Fornax A residual after the full pipeline peel (3 observations combined, dirty image rms in a
+   4 deg box): 0.048 Jy/beam, against 0.085 for the
+   x0.80 model, 0.094 for the 07/11/2023 catalogue and 0.250 for the 14/10/2026 self-cal model. No
+   stripes.
+ - Power spectrum (36 observations, CHIPS, after hyperdrive DI calibration and 1000-source ionospheric
+   peel, each normalised by its own calibrated power so the flux-scale change cancels): foreground-wedge
+   power 0.46 (XX) / 0.47 (YY) of the 07/11/2023 catalogue's, against 0.98 / 0.96 for x0.80 and
+   0.48 / 0.49 for the self-cal model; the self-cal model's excess at k_perp 0.15-0.3 h/Mpc is gone.
+   EoR-window power is unchanged within the ~5% scatter.
+ - A signal-injection test of the same calibration and peel chain finds no loss of a 21-cm-like
+   signal in the EoR window for the 07/11/2023 and self-cal catalogues (transfer 0.97-1.03 once the
+   flux scale is divided out).
+
+Limitations: no structure above ~490 wavelengths or below 10 wavelengths, so for Phase II compact /
+Phase III compact data, not Phase II extended; spectral indices fitted over 167-197 MHz only, do not
+extrapolate to the low band without checking; Stokes I only; fitted to one night.
+
+The `.skymodel` files follow the 14/10/2026 conventions (full catalogue in one patch named `sky`,
+Fornax A file with its own `FornaxA` patch, power laws referenced to 200 MHz, Gaussian axes to 9
+significant figures). Both `.yaml` files convert to FITS with `hyperdrive srclist-convert -o fits`.
+
 ### 14/10/2026
 `srclist_pumav3_EoR0LoBES_EoR1pietro_CenA-GP_2023-11-07_no-shapelets_FnxA-selfcal-20260905x087.yaml` \
 `srclist_pumav3_EoR0LoBES_EoR1pietro_CenA-GP_2023-11-07_no-shapelets_FnxA-selfcal-20260905x087.skymodel` \
