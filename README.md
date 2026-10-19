@@ -6,6 +6,13 @@ Current suggested sky model to use is:
 srclist_pumav3_EoR0LoBES_EoR1pietro_CenA-GP_2023-11-07.fits
 ```
 
+For EoR1 high-band (167-197 MHz) Phase II/III compact data, use the catalogue with the fitted
+Fornax A model instead ([16/10/2026](#16102026)):
+
+```
+srclist_pumav3_EoR0LoBES_EoR1pietro_CenA-GP_2023-11-07_no-shapelets_FnxA-v2-20260905.yaml
+```
+
 ## DP3 / hyperdrive compatible sky models
 
 Sky models in this section contain only point and Gaussian components (no shapelets), so they work in
@@ -63,6 +70,10 @@ Validation on held-out observations (gridpoints 6, 15 and 31 of the same night, 
 Limitations: no structure above ~490 wavelengths or below 10 wavelengths, so for Phase II compact /
 Phase III compact data, not Phase II extended; spectral indices fitted over 167-197 MHz only, do not
 extrapolate to the low band without checking; Stokes I only; fitted to one night.
+
+Used by the MWAEoR-Pipeline EoR1-high configuration (`eor1high-ph3.conf`, `dical_name = "30l_src8k_300it_fnxav2"`)
+from 17/10/2026. Full validation report, with power spectra and residual images:
+https://claude.ai/artifact/DuyC5BM5W5kMFJzMYRXdNF
 
 The `.skymodel` files follow the 14/10/2026 conventions (full catalogue in one patch named `sky`,
 Fornax A file with its own `FornaxA` patch, power laws referenced to 200 MHz, Gaussian axes to 9
