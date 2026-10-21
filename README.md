@@ -18,6 +18,84 @@ srclist_pumav3_EoR0LoBES_EoR1pietro_CenA-GP_2023-11-07_no-shapelets_FnxA-v2-2026
 Sky models in this section contain only point and Gaussian components (no shapelets), so they work in
 DP3 as well as hyperdrive. Each is provided as a hyperdrive `.yaml` and a DP3 `.skymodel`.
 
+### 21/10/2026
+`srclist_1205430776_VirA-field-selfcal-20261020.skymodel`
+
+An **observation-specific** model of the Virgo A field, self-calibrated from MWA obs
+**1205430776** (2018-03-18 17:52 UTC, Phase II extended array with baselines out to about 5 km,
+pointed at Virgo A at about 50 deg elevation, 139-170 MHz, 27 x 4 s, 768 x 40 kHz). It is provided
+only as a DP3 `.skymodel`, which hyperdrive 0.8 reads directly (it is recognised as a "dp3-style
+source list"), so the same file calibrates the observation in either tool:
+
+```
+export MWA_BEAM_FILE=mwa_full_embedded_element_pattern.h5
+hyperdrive di-calibrate -d 1205430776.ms 1205430776.metafits \
+  -s srclist_1205430776_VirA-field-selfcal-20261020.skymodel -o hyp_soln_1205430776.fits
+```
+
+The model has 35042 sources and 35940 components (35636 points and 304 Gaussians). Every component
+is a plain power law with no curvature:
+
+| part | components | Stokes I at 155 MHz | spectra |
+|---|---|---|---|
+| `VirA` (one source, within 0.4 deg of M87) | 899 (190 Gaussians) | 1180.5 Jy | SI -0.733 for every component |
+| `wsNNNN` field components (each its own source, 0.5-11 deg from Virgo A) | 34842 | 1606.9 Jy (+2363.0 / -756.1) | per component, clipped to [-2.5, 1] |
+| catalogue sources beyond 11 deg | 199 | 1220.2 Jy | from the catalogue |
+
+How it was made, using hyperdrive full-Jones DI calibration throughout, with one solution
+per tile and channel over the whole observation and baselines over 50 wavelengths:
+
+ - **Starting model**: the 500 brightest sources (by apparent flux) of the GLEAM-based global sky model
+   `GGSM_updated.fits`, selected with `hyperdrive srclist-by-beam -n 500` for this observation.
+ - **Virgo A**: two self-cal iterations. Each iteration calibrates, subtracts every source except
+   Virgo A, and images Virgo A with WSClean multiscale (12 arcsec pixels, Briggs 0, auto-mask 3 /
+   auto-threshold 1, 6 output channels with a 3-term spectral fit). The clean components within
+   0.4 deg are then converted to true sky by dividing by the zenith-normalised FEE beam
+   (`mwa_hyperbeam`, Stokes I = (|J_xx|^2 + |J_xy|^2 + |J_yx|^2 + |J_yy|^2) / 2). Per-channel gains cannot pin down Virgo A's
+   total flux or spectrum: unanchored, the model drifted from the catalogue's 1226 Jy to 1079 Jy, and its
+   spectral index to -0.17, in two iterations. After each iteration the total is therefore rescaled to
+   Perley & Butler 2017 (log S = 2.4466 - 0.8116x - 0.0483x^2, x = log10(nu/GHz): 1180 Jy at 155 MHz)
+   with that fit's in-band spectral index (-0.733), keeping the self-cal structure.
+ - **Field**: calibrate with that model, subtract Virgo A, and run WSClean multiscale over a
+   4096 x 4096 x 20 arcsec field (Briggs 0, auto-mask 3 / auto-threshold 1, 4 output channels,
+   2-term polynomial spectra, `-save-source-list`). The clean components between 0.5 and 11 deg of Virgo
+   A replace the catalogue sources there, beam-corrected as above. Spectral indices are the
+   linear polynomial term over the flux, clipped to [-2.5, 1], and components whose beam
+   response is below 1e-3 are dropped.
+ - **Validation**, by calibrating on the even timesteps and measuring the residual power
+   |D - G_i M G_j^H|^2 / |D|^2 on the odd timesteps. The radiometer noise floor, estimated from the
+   autocorrelations, is 0.100 (0.021 / 0.039 / 0.117 / 0.159 below 100 / 100-300 / 300-1000 /
+   1000-3000 wavelengths):
+
+   | model | total | < 100 | 100-300 | 300-1000 | 1000-3000 wavelengths |
+   |---|---|---|---|---|---|
+   | GGSM top 500 | 0.1242 | 0.0281 | 0.0490 | 0.1382 | 0.2115 |
+   | + Virgo A self-cal (PB17 anchored) | 0.1161 | 0.0251 | 0.0447 | 0.1357 | 0.1864 |
+
+   This file adds the field self-cal on top. A fair test of that step rebuilds the field model from
+   timesteps 0-13 only and scores it on timesteps 15-25, which it never saw:
+   0.1146 (0.0249 / 0.0445 / 0.1346 / 0.1824), against 0.1172 for the Virgo A-only model on the same
+   timesteps. The model built from all timesteps (this file) scores 0.1143.
+   More catalogue sources (1000-4000), 8 s or 24 s solution intervals, smoothing the
+   solutions, and a 100-200 wavelength minimum baseline all gave no improvement.
+   After calibrating all timesteps with this model, a
+   dirty image of the residual (4096 x 20 arcsec, Briggs 0) has 0.012 Jy/beam MAD rms and a 0.69 Jy/beam
+   peak at Virgo A. The GGSM top 500 calibration gives 0.028 Jy/beam and 22 Jy/beam.
+ - **Limitations**: the field components are clean components from one 2-minute observation,
+   at this pointing's beam. They include negative clean components (-756 Jy in total), which are
+   only meaningful together with their positive neighbours, and their spectra are
+   only constrained over 139-170 MHz. Treat the file as a calibration model for 1205430776 (or
+   very similar Phase II extended observations of Virgo A), not as a catalogue. Outside about 11 deg it is just the
+   GGSM catalogue.
+ - The file was written by
+   [`yaml2dp3.py`](https://github.com/MWATelescope/mwa-demo/blob/557a06e/shapelet2gauss/yaml2dp3.py)
+   with one patch per source, so `VirA` is a single DP3 patch for direction-dependent use. It was
+   checked by simulating one timestep (96 channels) with `hyperdrive vis-simulate` from both the
+   `.skymodel` and the original hyperdrive `.yaml`. The visibilities agree to 6e-8 rms (relative), i.e.
+   float precision. With the command above, hyperdrive's default horizon/beam veto keeps 34381 sources
+   (35279 components) and its default 50 wavelength minimum baseline applies, which matches the
+   calibration used for the numbers here.
+
 ### 16/10/2026
 `srclist_pumav3_EoR0LoBES_EoR1pietro_CenA-GP_2023-11-07_no-shapelets_FnxA-v2-20260905.yaml` \
 `srclist_pumav3_EoR0LoBES_EoR1pietro_CenA-GP_2023-11-07_no-shapelets_FnxA-v2-20260905.skymodel` \
